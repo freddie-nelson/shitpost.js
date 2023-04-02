@@ -9,6 +9,14 @@ const REDDIT_POST_URL_REGEX =
   /^https:\/\/www\.reddit\.com\/r\/[a-zA-Z0-9]+\/comments\/[a-zA-Z0-9]+\/[a-zA-Z0-9_]+\/?$/;
 const REDDIT_POST_ID_REGEX = /^[a-zA-Z0-9]+$/;
 
+export interface Comment {
+  id: string;
+  url: string;
+  body: string;
+
+  topReply: Omit<Comment, "topReply">;
+}
+
 export default class Shitposter {
   protected postId: string;
   protected backgroundVideoPath: string;
@@ -23,6 +31,13 @@ export default class Shitposter {
   public async createShitpost() {
     const comments = await this.getPostComments();
     console.log(comments);
+
+    this.getCommentTTS(comments[0]);
+  }
+
+  protected getCommentTTS(comment: Comment) {
+    const utter = new SpeechSynthesisUtterance(comment.body);
+    speechSynthesis.speak(utter);
   }
 
   protected async getPostComments() {
@@ -39,7 +54,7 @@ export default class Shitposter {
       .map((comment) => {
         comment.replies.sort((a, b) => b.ups - a.ups);
 
-        return {
+        return <Comment>{
           id: comment.id,
           url: comment.permalink,
           body: comment.body,

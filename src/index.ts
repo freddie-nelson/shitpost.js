@@ -1,4 +1,5 @@
 import ShitpostCreator from "./Shitposter";
+import TTS from "./TTS/TTS";
 
 const shitposter = new ShitpostCreator(
   "https://www.reddit.com/r/AskReddit/comments/l7530r/how_would_you_feel_about_reddit_adding_3_nsfw/",
@@ -6,4 +7,10 @@ const shitposter = new ShitpostCreator(
   10
 );
 
-shitposter.createShitpost();
+// shitposter.createShitpost();
+
+(async () => {
+  const tts = new TTS();
+  await tts.init();
+  await tts.speak("Hello world");
+})();
