@@ -1,3 +1,4 @@
+import { writeFile } from "fs/promises";
 import ShitpostCreator from "./Shitposter";
 import TTS from "./TTS/TTS";
 
@@ -12,5 +13,12 @@ const shitposter = new ShitpostCreator(
 (async () => {
   const tts = new TTS();
   await tts.init();
-  await tts.speak("Hello world");
+
+  const buffer = await tts.speak(
+    "Hello I am dwayne the rock johnson and I like fat cocks up my asshole.",
+    "mr-krabs"
+  );
+  await writeFile("./audio.wav", buffer);
+
+  await tts.close();
 })();

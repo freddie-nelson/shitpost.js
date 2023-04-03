@@ -7,6 +7,54 @@ import { useValidURL } from "../utils/useValidURL";
 config();
 
 export default class TTS {
+  readonly voices = [
+    "the-rock",
+    "carlisle-cullen",
+    "sea-captain",
+    "thomas-narrator",
+    "simon-cowell",
+    "spongebob-vocodes",
+    "yoda",
+    "mr-krabs",
+    "mj",
+    "jerry-seinfeld",
+    "bill-nye",
+    "albert-einstein",
+    "mordecai",
+    "eminem-arpa2",
+    "2pac-arpa",
+    "ken-barrie",
+    "barack-obama",
+    "michaelrosen",
+    "peppa-narrator",
+    "winston",
+    "johnny-cash",
+    "mike-wazowski",
+    "sully",
+    "roz",
+    "xp-narrator",
+    "ms-cortana",
+    "forza-4-satnav",
+    "marlin",
+    "cleveland-brown",
+    "peter-griffin",
+    "stewie-griffin-classic",
+    "oblivion-guard",
+    "4th-doctor",
+    "gru",
+    "lightning-mcqueen",
+    "mater",
+    "barney-03",
+    "siri-male-british",
+    "siri-female-british",
+    "michael-caine",
+    "will-smith-talking",
+    "flik",
+    "hopper",
+    "mikoto-misaka",
+    "hal-9000",
+  ] as const;
+
   protected hero: Hero;
   protected document: Hero["document"];
 
@@ -36,15 +84,24 @@ export default class TTS {
   @makesBusy()
   async init() {
     if (this.isInitialised) {
-      throw new Error("Client is already initialised.");
+      throw new Error("TTS is already initialised.");
     }
+
+    console.log("Initialising TTS.");
 
     this.hero = new Hero({
       showChrome: process.env.TTS_MODE === "debug",
+      mode: process.env.TTS_MODE === "debug" ? "development" : "production",
+      viewport: {
+        width: 1920,
+        height: 1080,
+      },
+      userAgent: "~ chrome >= 105 && windows >= 10",
     });
     this.document = this.hero.document;
 
     this.isInitialised = true;
+    console.log("Initialised TTS.");
 
     this.isBusy = false;
     await this.login();
@@ -54,7 +111,7 @@ export default class TTS {
     if (!this.isInitialised) return;
     if (this.isBusy) console.warn("WARN: Closing while busy may cause unexpected behaviour.");
 
-    console.log("Closing client.");
+    console.log("Closing TTS.");
 
     await this.hero.close();
     this.hero = undefined;
@@ -62,27 +119,41 @@ export default class TTS {
     this.isInitialised = false;
     this.isBusy = false;
 
-    console.log("Closed client.");
+    console.log("Closed TTS.");
   }
 
   @gracefulHeroClose()
   @needsFree()
   @needsInit()
   @makesBusy()
-  async speak(text: string, voice: "the-rock" = "the-rock") {
+  async speak(text: string, voice: typeof this.voices[number]) {
+    console.log("Starting speech synthesis");
+
     await this.hero.goto(`${this.TTS_URL}#mode=tts-basic&voice=${voice}`);
 
+    console.log("Converting text");
     const textArea = await this.waitForElement("textarea");
+    await this.hero.waitForMillis(2000);
     await this.hero.click(textArea);
     await this.hero.type(text);
 
     // find synthesize button
     const synthesizeButton = await this.findElementWithText("button", "Synthesize");
-    await this.hero.click(synthesizeButton);
+    await synthesizeButton.click();
 
     // wait for audio
-    const resource = await this.hero.waitForResource({ url: /.*audio\.wav$/ }, { timeoutMs: 300 * 1000 });
+    const sinceCommandId = await this.hero.lastCommandId;
+    console.log("Waiting for audio file");
 
+    await this.waitForElement("wave");
+    console.log("Found audio wave");
+
+    const resource = await this.hero.waitForResource(
+      { url: /.*audio\.wav$/ },
+      { timeoutMs: 30 * 1000, sinceCommandId }
+    );
+
+    console.log("Outputing buffer");
     const buffer = await resource.buffer;
     return buffer;
   }
@@ -91,6 +162,7 @@ export default class TTS {
   @needsFree()
   @makesBusy()
   protected async login() {
+    console.log("Logging in to TTS.");
     await this.goto(this.LOGIN_URL);
 
     const emailInput = await this.waitForElement("input#email");
@@ -99,6 +171,7 @@ export default class TTS {
     // find login button
     const loginButton = await this.findElementWithText("button", "Log In");
 
+    console.log("Inputting credentials");
     await this.hero.click(emailInput);
     await this.hero.type(process.env.TTS_EMAIL);
 
@@ -107,6 +180,7 @@ export default class TTS {
 
     await this.hero.click(loginButton);
     await this.waitForUrl(this.HOME_URL);
+    console.log("Logged in to TTS.");
   }
 
   @needsInit()
@@ -134,7 +208,7 @@ export default class TTS {
     caseSensitive?: boolean,
     checksIntervalMs?: number
   ) {
-    console.log(`Waiting for no '${selector}' element to exist with textContent '${text}'.`);
+    this.debugLog(`Waiting for no '${selector}' element to exist with textContent '${text}'.`);
 
     return this.waitFor(
       async () => !(await this.findElementWithText(selector, text, exactMatch, caseSensitive)),
@@ -152,7 +226,7 @@ export default class TTS {
     caseSensitive?: boolean,
     checksIntervalMs?: number
   ) {
-    console.log(`Waiting for '${selector}' element to exist with textContent '${text}'.`);
+    this.debugLog(`Waiting for '${selector}' element to exist with textContent '${text}'.`);
 
     return this.waitFor(
       () => this.findElementWithText(selector, text, exactMatch, caseSensitive),
@@ -168,7 +242,7 @@ export default class TTS {
     exactMatch = true,
     caseSensitive = false
   ) {
-    console.log(
+    this.debugLog(
       `Finding '${selector}' element with textContent ${exactMatch ? "of" : "containing"} '${text}'.`
     );
     const elements = await this.document.querySelectorAll(selector);
@@ -188,14 +262,14 @@ export default class TTS {
 
   @needsInit()
   protected async waitForNoElement(selector: string, timeout?: number, checksIntervalMs?: number) {
-    console.log(`Waiting for no element to exist with selector '${selector}'.`);
+    this.debugLog(`Waiting for no element to exist with selector '${selector}'.`);
 
     return this.waitFor(async () => !(await this.querySelector(selector, true)), timeout, checksIntervalMs);
   }
 
   @needsInit()
   protected async waitForElement(selector: string, timeout?: number, checksIntervalMs?: number) {
-    console.log(`Waiting for element with selector '${selector}' to exist.`);
+    this.debugLog(`Waiting for element with selector '${selector}' to exist.`);
 
     return this.waitFor(() => this.querySelector(selector), timeout, checksIntervalMs);
   }
@@ -239,11 +313,11 @@ export default class TTS {
 
   @needsInit()
   protected async querySelector(selector: string, silent = false) {
-    if (!silent) console.log(`Selecting element '${selector}'.`);
+    if (!silent) this.debugLog(`Selecting element '${selector}'.`);
 
     const element = await this.document.querySelector(selector);
     if (!element) {
-      if (!silent) console.log(`Could not find any element with selector '${selector}'.`);
+      if (!silent) this.debugLog(`Could not find any element with selector '${selector}'.`);
       return null;
     }
 
@@ -263,17 +337,17 @@ export default class TTS {
     )
       return;
 
-    console.log(`Navigating to '${url.href}'.`);
+    this.debugLog(`Navigating to '${url.href}'.`);
     await this.hero.goto(url.href);
-    console.log("Navigated, waiting for page to load.");
+    this.debugLog("Navigated, waiting for page to load.");
     try {
       await this.waitForLoad(waitForStatus);
     } catch (error) {
-      console.log("Waiting for page load failed, waiting for additional 2 seconds and continuing.");
-      console.log("waitForLoad Error (can ignore):", error);
+      this.debugLog("Waiting for page load failed, waiting for additional 2 seconds and continuing.");
+      this.debugLog("waitForLoad Error (can ignore):", error);
       await this.hero.waitForMillis(2e3);
     }
-    console.log(`Opened '${url.href}'.`);
+    this.debugLog(`Opened '${url.href}'.`);
   }
 
   /**
@@ -307,5 +381,9 @@ export default class TTS {
   @needsInit()
   protected async waitForLoad(status: LoadStatus = LoadStatus.AllContentLoaded) {
     await this.hero.waitForLoad(status);
+  }
+
+  protected debugLog(...args: any[]) {
+    if (process.env.TTS_MODE === "debug") console.log(`[${new Date().toISOString()} DEBUG]:`, ...args);
   }
 }
