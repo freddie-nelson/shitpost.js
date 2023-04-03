@@ -1,11 +1,13 @@
-import Hero, { IHeroCreateOptions, LoadStatus } from "@ulixee/hero-playground";
+import Hero, { IHeroCreateOptions, LoadStatus } from "@ulixee/hero";
 import { gracefulHeroClose, makesBusy, needsFree, needsInit } from "./classDecorators";
 import { useValidURL } from "../utils/useValidURL";
+import Miner from "@ulixee/miner";
 
 export default class Scraper {
   protected name: string;
   protected heroOptions: IHeroCreateOptions;
   protected hero: Hero;
+  protected miner: Miner;
   protected document: Hero["document"];
 
   // CLIENT STATE FLAGS
@@ -37,7 +39,14 @@ export default class Scraper {
 
     console.log(`Initialising ${this.name}.`);
 
-    this.hero = new Hero(this.heroOptions);
+    this.miner = new Miner();
+    const connection = await this.miner.listen();
+
+    this.hero = new Hero({
+      ...this.heroOptions,
+      connectionToCore: { host: `localhost:${connection.port}` },
+    });
+
     this.document = this.hero.document;
 
     this.isInitialised = true;
@@ -51,7 +60,10 @@ export default class Scraper {
     console.log(`Closing ${this.name}.`);
 
     await this.hero.close();
+    await this.miner.close();
+
     this.hero = undefined;
+    this.miner = undefined;
 
     this.isInitialised = false;
     this.isBusy = false;

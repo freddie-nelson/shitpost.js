@@ -12,7 +12,9 @@ const downloadVideo = async (url: string, name: string) => {
   console.log(`Downloading ${name}.mp4`);
 
   return new Promise<void>((resolve, reject) => {
-    const stream = ytdl(url, { filter: "videoonly" });
+    const stream = ytdl(url, {
+      filter: (format: any) => format.itag === 299, // 1080p60 mp4
+    });
 
     stream.on("end", () => {
       console.log(`Finished downloading ${name}.mp4`);
@@ -21,6 +23,7 @@ const downloadVideo = async (url: string, name: string) => {
 
     stream.on("error", (err: Error) => {
       console.error(`Error downloading ${name}.mp4`);
+      console.error(err);
       reject(err);
     });
 

@@ -2,9 +2,16 @@ import Snoowrap from "snoowrap";
 import isValidPath from "is-valid-path";
 import { config } from "dotenv";
 import TTS, { Voice } from "./TTS";
-import { writeFile } from "fs/promises";
+import { lstat, readFile, readdir, writeFile } from "fs/promises";
 import Screenshotter from "./Screenshotter";
 import { useSnoowrapRequester } from "./utils/useSnoowrapRequester";
+import { fstatSync } from "fs";
+import { join } from "path";
+import { usePostTitle } from "./utils/usePostTitle";
+import Ffmpeg from "fluent-ffmpeg";
+import useFfmpegLogging from "./utils/useFfmpegLogging";
+import { useVideoDuration } from "./utils/useVideoDuration";
+import { useFfmpegPromise } from "./utils/useFfmpegPromise";
 
 // Load environment variables
 config();
@@ -40,6 +47,8 @@ export default class Shitposter {
   protected tts = new TTS();
   protected screenshotter = new Screenshotter();
 
+  protected MAX_VIDEO_DURATION = 5;
+
   constructor(
     postUrlOrId: string,
     backgroundVideoPath: string,
@@ -58,28 +67,68 @@ export default class Shitposter {
   }
 
   async createShitpost() {
+    // DOWNLOAD ASSETS
     // await this.tts.init();
-    await this.screenshotter.init();
+    // await this.screenshotter.init();
 
-    const postScreenshot = await this.screenshotter.screenshotPost(this.postId);
-    await writeFile(`./output/${this.postId}.jpeg`, postScreenshot);
+    const postAudio = await readFile("./output/129j5h3.wav");
+    const postScreenshot = await readFile("./output/129j5h3.jpeg");
+    // const postAudio = await this.getTTS(await usePostTitle(this.postId));
+    // const postScreenshot = await this.screenshotter.screenshotPost(this.postId);
+    // await writeFile(`./output/${this.postId}.wav`, postAudio);
+    // await writeFile(`./output/${this.postId}.jpeg`, postScreenshot);
 
-    // const comments = await this.getPostComments();
-    // await this.createCommentAudios(comments);
-    // await this.createCommentScreenshots(comments);
-    // console.log(comments);
+    const comments = await this.getPostComments();
+    await this.createCommentAudios(comments);
+    await this.createCommentScreenshots(comments);
 
     // await this.tts.close();
-    await this.screenshotter.close();
+    // await this.screenshotter.close();
+
+    // CREATE VIDEO
+    const backgroundVideoFilename = await this.chooseBackgroundVideo();
+    const duration = await useVideoDuration(backgroundVideoFilename);
+
+    // choose random start time with a 60 second buffer from the end
+    const startTime = Math.floor(Math.random() * (duration - this.MAX_VIDEO_DURATION));
+
+    const cutBackgroundVideo = useFfmpegLogging(Ffmpeg(backgroundVideoFilename))
+      .fps(30)
+      .setStartTime(startTime)
+      .setDuration(this.MAX_VIDEO_DURATION)
+      .save("./output/background-cut.mp4");
+    await useFfmpegPromise(cutBackgroundVideo);
+
+    const resizeBackgroundVideo = useFfmpegLogging(Ffmpeg("./output/background-cut.mp4"))
+      .size(`?x${this.videoDimensions.height}`)
+      .save("./output/background-resized.mp4");
+    await useFfmpegPromise(resizeBackgroundVideo);
+  }
+
+  protected async chooseBackgroundVideo() {
+    // if background video path is a directory, choose a random file from it
+    if ((await lstat(this.backgroundVideoPath)).isDirectory()) {
+      const files = await readdir(this.backgroundVideoPath);
+      const file = files[Math.floor(Math.random() * files.length)];
+
+      return join(this.backgroundVideoPath, file);
+    } else {
+      return this.backgroundVideoPath;
+    }
   }
 
   protected async createCommentAudios(comments: Comment[]) {
+    for (const comment of comments) {
+      comment.audio = await readFile(`./output/${comment.id}.wav`);
+    }
+    return;
+
     for (let i = 0; i < comments.length; i++) {
       const comment = comments[i];
       console.log(`Creating audio for comment ${i + 1} of ${comments.length}`);
 
       comment.audio = await this.getTTS(comment.body);
-      await writeFile(`./${comment.id}.wav`, comment.audio);
+      await writeFile(`./output/${comment.id}.wav`, comment.audio);
 
       console.log(`Created audio for comment ${i + 1} of ${comments.length}`);
 
@@ -96,6 +145,11 @@ export default class Shitposter {
   }
 
   protected async createCommentScreenshots(comments: Comment[]) {
+    for (const comment of comments) {
+      comment.screenshot = await readFile(`./output/${comment.id}.jpeg`);
+    }
+    return;
+
     for (let i = 0; i < comments.length; i++) {
       const comment = comments[i];
       console.log(`Creating screenshot for comment ${i + 1} of ${comments.length}`);
@@ -118,8 +172,6 @@ export default class Shitposter {
   }
 
   protected async getTTS(text: string, voice = this.narratorVoice) {
-    if (!this.tts.getIsInitialised()) await this.tts.init();
-
     return this.tts.speak(text, typeof voice === "string" ? voice : voice());
   }
 

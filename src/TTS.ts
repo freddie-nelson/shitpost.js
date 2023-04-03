@@ -75,7 +75,6 @@ export default class TTS extends Scraper {
 
   @gracefulHeroClose()
   @needsFree()
-  @makesBusy()
   async init() {
     await super.init();
 
@@ -107,7 +106,7 @@ export default class TTS extends Scraper {
     const sinceCommandId = await this.hero.lastCommandId;
     console.log("Waiting for audio file");
 
-    await this.waitForElement("wave");
+    await this.waitForElement("wave", 300 * 1000);
     console.log("Found audio wave");
 
     const resource = await this.hero.waitForResource(

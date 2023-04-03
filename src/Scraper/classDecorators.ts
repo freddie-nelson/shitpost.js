@@ -28,6 +28,7 @@ export const gracefulHeroClose = () => {
         return returnValue;
       } catch (error) {
         await this.close();
+        console.log(error);
         throw error;
       }
     };

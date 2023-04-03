@@ -1,10 +1,8 @@
-import { writeFile } from "fs/promises";
 import ShitpostCreator from "./Shitposter";
-import TTS from "./TTS";
 
 const shitposter = new ShitpostCreator(
   "https://www.reddit.com/r/AskReddit/comments/129j5h3/if_there_is_ice_cream_in_zootopia_who_is_getting/",
-  "C:\\Users\\fredd\\Documents\\programming\\shitposter.js\\background-footage",
+  "C:\\Users\\fredd\\Documents\\programming\\shitpost.js\\background-footage\\csgo-surf-1.mp4",
   5,
   0.8,
   "siri-male-british"
