@@ -4,7 +4,7 @@ import TTS from "./TTS";
 
 const shitposter = new ShitpostCreator(
   "https://www.reddit.com/r/AskReddit/comments/129j5h3/if_there_is_ice_cream_in_zootopia_who_is_getting/",
-  "C:\\Users\\user\\Desktop\\test.mp4",
+  "C:\\Users\\fredd\\Documents\\programming\\shitposter.js\\background-footage",
   5,
   0.8,
   "siri-male-british"

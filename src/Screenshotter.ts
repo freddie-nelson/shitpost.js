@@ -1,6 +1,7 @@
 import Scraper from "./Scraper/Scraper";
 import { gracefulHeroClose, makesBusy, needsFree, needsInit } from "./Scraper/classDecorators";
 import { Comment } from "./Shitposter";
+import { usePostUrl } from "./utils/usePostUrl";
 
 export default class Screenshotter extends Scraper {
   constructor() {
@@ -15,6 +16,38 @@ export default class Screenshotter extends Scraper {
       },
       userAgent: "~ chrome >= 105 && windows >= 10",
     });
+  }
+
+  @gracefulHeroClose()
+  @needsInit()
+  @needsFree()
+  @makesBusy()
+  async screenshotPost(postId: string) {
+    const url = await usePostUrl(postId);
+    console.log(`Taking screenshot of post ${postId} at ${url}`);
+
+    await this.hero.goto(url);
+    await this.hero.waitForPaintingStable();
+    await this.hero.waitForMillis(4000);
+
+    console.log("Finding post");
+    const postElement = await this.waitForElement(`#t3_${postId}`);
+    await this.hero.waitForMillis(4000);
+
+    console.log("Taking screenshot");
+    const clientRect = await postElement.getBoundingClientRect();
+    const rectangle = {
+      x: await clientRect.x,
+      y: await clientRect.y,
+      width: await clientRect.width,
+      height: await clientRect.height,
+      scale: 2,
+    };
+
+    const buffer = await this.hero.takeScreenshot({ rectangle, format: "jpeg" });
+    console.log(`Screenshot taken of post ${postId}`);
+
+    return buffer;
   }
 
   @gracefulHeroClose()

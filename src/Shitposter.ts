@@ -4,6 +4,7 @@ import { config } from "dotenv";
 import TTS, { Voice } from "./TTS";
 import { writeFile } from "fs/promises";
 import Screenshotter from "./Screenshotter";
+import { useSnoowrapRequester } from "./utils/useSnoowrapRequester";
 
 // Load environment variables
 config();
@@ -56,16 +57,19 @@ export default class Shitposter {
     this.setVideoDimensions(videoDimensions);
   }
 
-  public async createShitpost() {
-    await this.tts.init();
+  async createShitpost() {
+    // await this.tts.init();
     await this.screenshotter.init();
 
-    const comments = await this.getPostComments();
-    await this.createCommentAudios(comments);
-    await this.createCommentScreenshots(comments);
-    console.log(comments);
+    const postScreenshot = await this.screenshotter.screenshotPost(this.postId);
+    await writeFile(`./output/${this.postId}.jpeg`, postScreenshot);
 
-    await this.tts.close();
+    // const comments = await this.getPostComments();
+    // await this.createCommentAudios(comments);
+    // await this.createCommentScreenshots(comments);
+    // console.log(comments);
+
+    // await this.tts.close();
     await this.screenshotter.close();
   }
 
@@ -120,7 +124,7 @@ export default class Shitposter {
   }
 
   protected async getPostComments() {
-    const r = this.createSnoowrapRequester();
+    const r = useSnoowrapRequester();
 
     const post = r.getSubmission(this.postId);
 
@@ -151,21 +155,8 @@ export default class Shitposter {
     return comments;
   }
 
-  protected createSnoowrapRequester() {
-    const requesterOptions = {
-      userAgent: "shitposter.js",
-      clientId: process.env.CLIENT_ID,
-      clientSecret: process.env.CLIENT_SECRET,
-      username: process.env.REDDIT_USERNAME,
-      password: process.env.REDDIT_PASSWORD,
-    };
-
-    return new Snoowrap(requesterOptions);
-  }
-
   // GETTERS AND SETTERS
-
-  public setPostId(postUrlOrId: string) {
+  setPostId(postUrlOrId: string) {
     const isUrl = new Promise(() => new URL(postUrlOrId)).catch(() => false).then(() => true);
     let postId = "";
 
@@ -189,7 +180,7 @@ export default class Shitposter {
     this.postId = postId;
   }
 
-  public setBackgroundVideoPath(backgroundVideoPath: string) {
+  setBackgroundVideoPath(backgroundVideoPath: string) {
     if (!isValidPath(backgroundVideoPath)) {
       throw new Error("Invalid path");
     }
@@ -197,7 +188,7 @@ export default class Shitposter {
     this.backgroundVideoPath = backgroundVideoPath;
   }
 
-  public setCommentCount(commentCount: number) {
+  setCommentCount(commentCount: number) {
     if (commentCount < 1) {
       throw new Error("Comment count must be greater than 0");
     } else if (commentCount > 30) {
@@ -207,7 +198,7 @@ export default class Shitposter {
     this.commentCount = commentCount;
   }
 
-  public setTopReplyShowThreshold(topReplyShowThreshold: number) {
+  setTopReplyShowThreshold(topReplyShowThreshold: number) {
     if (topReplyShowThreshold < 0 || topReplyShowThreshold > 1) {
       throw new Error("Top reply show threshold must be between 0 and 1");
     }
@@ -215,7 +206,7 @@ export default class Shitposter {
     this.topReplyShowThreshold = topReplyShowThreshold;
   }
 
-  public setVideoDimensions(videoDimensions: VideoDiemensions) {
+  setVideoDimensions(videoDimensions: VideoDiemensions) {
     if (videoDimensions.width < 1 || videoDimensions.height < 1) {
       throw new Error("Video dimensions must be greater than 0");
     }
