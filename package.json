@@ -6,7 +6,8 @@
   "scripts": {
     "start": "ts-node src/index.ts",
     "build": "tsc src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "download-footage": "ts-node download-footage.ts"
   },
   "author": "",
   "license": "ISC",
@@ -15,7 +16,8 @@
     "@types/node": "^18.15.11",
     "ts-node": "^10.9.1",
     "tsc": "^2.0.4",
-    "typescript": "^4.9.4"
+    "typescript": "^4.9.4",
+    "ytdl-core": "^4.11.3"
   },
   "dependencies": {
     "@ffmpeg/core": "^0.11.0",
