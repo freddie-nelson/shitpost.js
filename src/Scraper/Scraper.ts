@@ -1,67 +1,12 @@
-import { config } from "dotenv";
-import Hero, { ISuperElement, LoadStatus } from "@ulixee/hero-playground";
+import Hero, { IHeroCreateOptions, LoadStatus } from "@ulixee/hero-playground";
 import { gracefulHeroClose, makesBusy, needsFree, needsInit } from "./classDecorators";
 import { useValidURL } from "../utils/useValidURL";
 
-// Load environment variables
-config();
-
-export default class TTS {
-  readonly voices = [
-    "the-rock",
-    "carlisle-cullen",
-    "sea-captain",
-    "thomas-narrator",
-    "simon-cowell",
-    "spongebob-vocodes",
-    "yoda",
-    "mr-krabs",
-    "mj",
-    "jerry-seinfeld",
-    "bill-nye",
-    "albert-einstein",
-    "mordecai",
-    "eminem-arpa2",
-    "2pac-arpa",
-    "ken-barrie",
-    "barack-obama",
-    "michaelrosen",
-    "peppa-narrator",
-    "winston",
-    "johnny-cash",
-    "mike-wazowski",
-    "sully",
-    "roz",
-    "xp-narrator",
-    "ms-cortana",
-    "forza-4-satnav",
-    "marlin",
-    "cleveland-brown",
-    "peter-griffin",
-    "stewie-griffin-classic",
-    "oblivion-guard",
-    "4th-doctor",
-    "gru",
-    "lightning-mcqueen",
-    "mater",
-    "barney-03",
-    "siri-male-british",
-    "siri-female-british",
-    "michael-caine",
-    "will-smith-talking",
-    "flik",
-    "hopper",
-    "mikoto-misaka",
-    "hal-9000",
-  ] as const;
-
+export default class Scraper {
+  protected name: string;
+  protected heroOptions: IHeroCreateOptions;
   protected hero: Hero;
   protected document: Hero["document"];
-
-  // URLS
-  protected HOME_URL = "https://app.uberduck.ai/";
-  protected LOGIN_URL = "https://auth.uberduck.ai/login";
-  protected TTS_URL = `${this.HOME_URL}speak`;
 
   // CLIENT STATE FLAGS
   protected isInitialised = false;
@@ -77,41 +22,33 @@ export default class TTS {
     return !this.isBusy;
   }
 
-  constructor() {}
+  constructor(name: string, heroOptions: IHeroCreateOptions) {
+    this.name = name || "client";
+    this.heroOptions = heroOptions;
+  }
 
   @gracefulHeroClose()
   @needsFree()
   @makesBusy()
   async init() {
     if (this.isInitialised) {
-      throw new Error("TTS is already initialised.");
+      throw new Error(`${this.name} is already initialised.`);
     }
 
-    console.log("Initialising TTS.");
+    console.log(`Initialising ${this.name}.`);
 
-    this.hero = new Hero({
-      showChrome: process.env.TTS_MODE === "debug",
-      mode: process.env.TTS_MODE === "debug" ? "development" : "production",
-      viewport: {
-        width: 1920,
-        height: 1080,
-      },
-      userAgent: "~ chrome >= 105 && windows >= 10",
-    });
+    this.hero = new Hero(this.heroOptions);
     this.document = this.hero.document;
 
     this.isInitialised = true;
-    console.log("Initialised TTS.");
-
-    this.isBusy = false;
-    await this.login();
+    console.log(`Initialised ${this.name}.`);
   }
 
   async close() {
     if (!this.isInitialised) return;
     if (this.isBusy) console.warn("WARN: Closing while busy may cause unexpected behaviour.");
 
-    console.log("Closing TTS.");
+    console.log(`Closing ${this.name}.`);
 
     await this.hero.close();
     this.hero = undefined;
@@ -119,68 +56,7 @@ export default class TTS {
     this.isInitialised = false;
     this.isBusy = false;
 
-    console.log("Closed TTS.");
-  }
-
-  @gracefulHeroClose()
-  @needsFree()
-  @needsInit()
-  @makesBusy()
-  async speak(text: string, voice: typeof this.voices[number]) {
-    console.log("Starting speech synthesis");
-
-    await this.hero.goto(`${this.TTS_URL}#mode=tts-basic&voice=${voice}`);
-
-    console.log("Converting text");
-    const textArea = await this.waitForElement("textarea");
-    await this.hero.waitForMillis(2000);
-    await this.hero.click(textArea);
-    await this.hero.type(text);
-
-    // find synthesize button
-    const synthesizeButton = await this.findElementWithText("button", "Synthesize");
-    await synthesizeButton.click();
-
-    // wait for audio
-    const sinceCommandId = await this.hero.lastCommandId;
-    console.log("Waiting for audio file");
-
-    await this.waitForElement("wave");
-    console.log("Found audio wave");
-
-    const resource = await this.hero.waitForResource(
-      { url: /.*audio\.wav$/ },
-      { timeoutMs: 30 * 1000, sinceCommandId }
-    );
-
-    console.log("Outputing buffer");
-    const buffer = await resource.buffer;
-    return buffer;
-  }
-
-  @gracefulHeroClose()
-  @needsFree()
-  @makesBusy()
-  protected async login() {
-    console.log("Logging in to TTS.");
-    await this.goto(this.LOGIN_URL);
-
-    const emailInput = await this.waitForElement("input#email");
-    const passwordInput = await this.waitForElement("input#password");
-
-    // find login button
-    const loginButton = await this.findElementWithText("button", "Log In");
-
-    console.log("Inputting credentials");
-    await this.hero.click(emailInput);
-    await this.hero.type(process.env.TTS_EMAIL);
-
-    await this.hero.click(passwordInput);
-    await this.hero.type(process.env.TTS_PASSWORD);
-
-    await this.hero.click(loginButton);
-    await this.waitForUrl(this.HOME_URL);
-    console.log("Logged in to TTS.");
+    console.log(`Closed ${this.name}.`);
   }
 
   @needsInit()
@@ -384,6 +260,6 @@ export default class TTS {
   }
 
   protected debugLog(...args: any[]) {
-    if (process.env.TTS_MODE === "debug") console.log(`[${new Date().toISOString()} DEBUG]:`, ...args);
+    if (this.heroOptions.mode === "development") console.log(`[${new Date().toISOString()} DEBUG]:`, ...args);
   }
 }
