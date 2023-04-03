@@ -3,3 +3,4 @@ build
 *.wav
 output
 *.mp4
+.env
