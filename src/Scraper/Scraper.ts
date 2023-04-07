@@ -2,6 +2,7 @@ import Hero, { IHeroCreateOptions, LoadStatus } from "@ulixee/hero";
 import { gracefulHeroClose, makesBusy, needsFree, needsInit } from "./classDecorators";
 import { useValidURL } from "../utils/useValidURL";
 import Miner from "@ulixee/miner";
+import Core from "@ulixee/hero-core";
 
 export default class Scraper {
   protected name: string;
@@ -24,7 +25,12 @@ export default class Scraper {
     return !this.isBusy;
   }
 
-  constructor(name: string, heroOptions: IHeroCreateOptions) {
+  constructor(
+    name: string,
+    heroOptions: IHeroCreateOptions,
+    private clientPlugins: any[] = [],
+    private corePlugins: any[] = []
+  ) {
     this.name = name || "client";
     this.heroOptions = heroOptions;
   }
@@ -39,6 +45,11 @@ export default class Scraper {
 
     console.log(`Initialising ${this.name}.`);
 
+    // install core plugins
+    for (const p of this.corePlugins) {
+      Core.use(p);
+    }
+
     this.miner = new Miner();
     const connection = await this.miner.listen();
 
@@ -46,6 +57,11 @@ export default class Scraper {
       ...this.heroOptions,
       connectionToCore: { host: `localhost:${connection.port}` },
     });
+
+    // install client plugins
+    for (const p of this.clientPlugins) {
+      this.hero.use(p);
+    }
 
     this.document = this.hero.document;
 
@@ -59,8 +75,7 @@ export default class Scraper {
 
     console.log(`Closing ${this.name}.`);
 
-    await this.hero.close();
-    await this.miner.close();
+    await this.miner.close(true);
 
     this.hero = undefined;
     this.miner = undefined;

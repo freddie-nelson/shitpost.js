@@ -4,3 +4,4 @@ build
 output
 *.mp4
 .env
+tmp

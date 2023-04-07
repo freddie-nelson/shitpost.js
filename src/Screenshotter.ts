@@ -9,9 +9,9 @@ export default class Screenshotter extends Scraper {
       showChrome: process.env.SCREENSHOTTER_MODE === "debug",
       mode: process.env.SCREENSHOTTER_MODE === "debug" ? "development" : "production",
       viewport: {
-        width: 1920,
+        width: 500,
         height: 2160,
-        screenWidth: 1920,
+        screenWidth: 500,
         screenHeight: 2160,
       },
       userAgent: "~ chrome >= 105 && windows >= 10",
@@ -41,7 +41,7 @@ export default class Screenshotter extends Scraper {
       y: await clientRect.y,
       width: await clientRect.width,
       height: await clientRect.height,
-      scale: 2,
+      scale: 3,
     };
 
     const buffer = await this.hero.takeScreenshot({ rectangle, format: "jpeg" });
@@ -72,7 +72,7 @@ export default class Screenshotter extends Scraper {
       y: await clientRect.y,
       width: await clientRect.width,
       height: await clientRect.height,
-      scale: 2,
+      scale: 3,
     };
 
     const buffer = await this.hero.takeScreenshot({ rectangle, format: "jpeg" });
